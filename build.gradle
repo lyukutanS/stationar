@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id "io.qameta.allure" version "2.9.6"
 }
 
 group 'org.softTrust'
@@ -9,11 +10,92 @@ repositories {
     mavenCentral()
 }
 
+def selenideVersion = "6.3.5",
+    junitVersion = "5.8.2",
+    slf4jVersion = "1.7.36",
+    allureSelenideVersion = "2.16.1",
+    allureRestAssuredVersion = "2.16.1",
+    ownerVersion = "1.0.12",
+    restAssuredVersion = "5.0.1",
+    assertjVersion = "3.22.0",
+    jsonPathVersion = "2.7.0"
+
+allure {
+    report {
+        version.set(allureSelenideVersion)
+    }
+    adapter {
+        aspectjWeaver.set(true)
+        frameworks {
+            junit5 {
+                adapterVersion.set(allureSelenideVersion)
+            }
+        }
+    }
+}
+
 dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    testImplementation(
+            "com.codeborne:selenide:$selenideVersion",
+            "io.qameta.allure:allure-selenide:$allureSelenideVersion",
+            "io.qameta.allure:allure-rest-assured:$allureRestAssuredVersion",
+            "org.junit.jupiter:junit-jupiter-api:$junitVersion",
+            "org.aeonbits.owner:owner:$ownerVersion",
+            "io.rest-assured:rest-assured:$restAssuredVersion",
+            "io.rest-assured:json-schema-validator:$restAssuredVersion",
+            "org.assertj:assertj-core:$assertjVersion",
+            "org.junit.jupiter:junit-jupiter-params:5.9.0",
+            "com.jayway.jsonpath:json-path:$jsonPathVersion",
+            "io.qameta.allure:allure-cucumber6-jvm:2.13.6",
+            "org.springframework.boot:spring-boot-starter:*",
+            "io.cucumber:cucumber-spring:6.10.3",
+            "io.github.prashant-ramcharan:courgette-jvm:5.10.1",
+            "org.aspectj:aspectjweaver:1.9.6"
+    )
+    testRuntimeOnly(
+            "org.springframework.boot:spring-boot-starter-test:*",
+            "org.slf4j:slf4j-simple:$slf4jVersion",
+            "org.junit.jupiter:junit-jupiter-engine:$junitVersion")
+}
+
+compileJava {
+    options.encoding = 'UTF-8'
+}
+compileTestJava {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
 }
 
 test {
     useJUnitPlatform()
+}
+
+tasks.withType(Test) {
+    systemProperties(System.getProperties())
+    useJUnitPlatform()
+
+    if (System.getProperty("threads") != null) {
+        systemProperties += [
+                'junit.jupiter.execution.parallel.enabled'                 : true,
+                'junit.jupiter.execution.parallel.mode.default'            : 'concurrent',
+                'junit.jupiter.execution.parallel.mode.classes.default'    : 'concurrent',
+                'junit.jupiter.execution.parallel.config.strategy'         : 'fixed',
+                'junit.jupiter.execution.parallel.config.fixed.parallelism': System.getProperty("threads").toInteger()
+        ]
+    }
+}
+
+task web_tests(type: Test) {
+    useJUnitPlatform {
+        includeTags 'web'
+    }
+}
+
+task api_tests(type: Test) {
+    useJUnitPlatform {
+        includeTags 'api'
+    }
 }
